@@ -6,6 +6,45 @@
  */
 const isStar = true;
 
+let getParts = value =>
+    value
+        .split('.')
+        .map((_, index, array) =>
+            array
+                .slice(0, index + 1)
+                .join('.'));
+
+function createIfEmpty(delegates, event, context) {
+    if (!delegates.has(event)) {
+        delegates.set(event, new Map());
+    }
+    if (!delegates.get(event).has(context)) {
+        delegates.get(event).set(context, []);
+    }
+}
+
+function callOne(records, i) {
+    let record = records[i];
+    if (--record.wait <= 0) {
+        record.wait = record.every;
+        record.action();
+    }
+    if (--record.left === 0) {
+        records.splice(i);
+    }
+}
+
+function callAll(delegates, part) {
+    if (!delegates.has(part)) {
+        return;
+    }
+    for (var records of delegates.get(part).values()) {
+        for (var i = records.length - 1; i >= 0; i--) {
+            callOne(records, i);
+        }
+    }
+}
+
 /**
  * Возвращает новый emitter
  * @returns {Object}
@@ -18,26 +57,48 @@ function getEmitter() {
          * @param {String} event
          * @param {Object} context
          * @param {Function} handler
+         * @returns {Object} this
          */
         on: function (event, context, handler) {
-            console.info(event, context, handler);
+            createIfEmpty(this.delegates, event, context);
+            this.delegates.get(event).get(context)
+                .push({
+                    action: handler.bind(context),
+                    left: 0,
+                    wait: 0,
+                    every: 0
+                });
+
+            return this;
         },
 
         /**
          * Отписаться от события
          * @param {String} event
          * @param {Object} context
+         * @returns {Object} this
          */
         off: function (event, context) {
-            console.info(event, context);
+            for (var key of this.delegates.keys()) {
+                if (key.startsWith(event)) {
+                    this.delegates.get(key).delete(context);
+                }
+            }
+
+            return this;
         },
 
         /**
          * Уведомить о событии
          * @param {String} event
+         * @returns {Object} this
          */
         emit: function (event) {
-            console.info(event);
+            getParts(event)
+                .reverse()
+                .forEach(part => callAll(this.delegates, part));
+
+            return this;
         },
 
         /**
@@ -47,9 +108,19 @@ function getEmitter() {
          * @param {Object} context
          * @param {Function} handler
          * @param {Number} times – сколько раз получить уведомление
+         * @returns {Object} this
          */
         several: function (event, context, handler, times) {
-            console.info(event, context, handler, times);
+            createIfEmpty(this.delegates, event, context);
+            this.delegates.get(event).get(context)
+                .push({
+                    action: handler.bind(context),
+                    left: times,
+                    wait: 0,
+                    every: 0
+                });
+
+            return this;
         },
 
         /**
@@ -59,10 +130,22 @@ function getEmitter() {
          * @param {Object} context
          * @param {Function} handler
          * @param {Number} frequency – как часто уведомлять
+         * @returns {Object} this
          */
         through: function (event, context, handler, frequency) {
-            console.info(event, context, handler, frequency);
-        }
+            createIfEmpty(this.delegates, event, context);
+            this.delegates.get(event).get(context)
+                .push({
+                    action: handler.bind(context),
+                    left: 0,
+                    wait: 0,
+                    every: frequency
+                });
+
+            return this;
+        },
+
+        delegates: new Map()
     };
 }
 
