@@ -23,17 +23,6 @@ function createIfEmpty(delegates, event, context) {
     }
 }
 
-function callOne(records, i) {
-    let record = records[i];
-    if (--record.wait <= 0) {
-        record.wait = record.every;
-        record.action();
-    }
-    if (--record.left === 0) {
-        records.splice(i);
-    }
-}
-
 function callAll(delegates, part) {
     if (!delegates.has(part)) {
         return;
@@ -42,6 +31,17 @@ function callAll(delegates, part) {
         for (var i = records.length - 1; i >= 0; i--) {
             callOne(records, i);
         }
+    }
+}
+
+function callOne(records, i) {
+    let record = records[i];
+    if (--record.wait <= 0 && !records.isEnded) {
+        record.wait = record.every;
+        record.action();
+    }
+    if (--record.left === 0) {
+        records.isEnded = true;
     }
 }
 
