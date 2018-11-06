@@ -79,7 +79,9 @@ function getEmitter() {
          * @returns {Object} this
          */
         off: function (event, context) {
-            this.delegates.get(event).delete(context);
+            if (this.delegates.has(event)) {
+                this.delegates.get(event).delete(context);
+            }
             for (var key of this.delegates.keys()) {
                 if (key.startsWith(`${event}.`)) {
                     this.delegates.get(key).delete(context);
@@ -116,7 +118,7 @@ function getEmitter() {
             this.delegates.get(event).get(context)
                 .push({
                     action: handler.bind(context),
-                    left: Math.min(0, times),
+                    left: times,
                     wait: 0,
                     every: 0
                 });
@@ -140,7 +142,7 @@ function getEmitter() {
                     action: handler.bind(context),
                     left: 0,
                     wait: 0,
-                    every: Math.min(0, frequency)
+                    every: frequency
                 });
 
             return this;
