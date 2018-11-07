@@ -28,20 +28,14 @@ function callAll(delegates, part) {
         return;
     }
     for (var records of delegates.get(part).values()) {
-        for (var i = records.length - 1; i >= 0; i--) {
-            callOne(records, i);
-        }
-    }
-}
-
-function callOne(records, i) {
-    let record = records[i];
-    if (--record.wait <= 0 && !records.isEnded) {
-        record.wait = record.every;
-        record.action();
-    }
-    if (--record.left === 0) {
-        records.isEnded = true;
+        records.forEach(record => {
+            if (record.times < 1 || record.called < record.times) {
+                if (record.frequency < 1 || !(record.called % record.frequency)) {
+                    record.action();
+                }
+            }
+            record.called++;
+        });
     }
 }
 
@@ -64,9 +58,9 @@ function getEmitter() {
             this.delegates.get(event).get(context)
                 .push({
                     action: handler.bind(context),
-                    left: 0,
-                    wait: 0,
-                    every: 0
+                    called: 0,
+                    times: 0,
+                    frequency: 0
                 });
 
             return this;
@@ -118,9 +112,9 @@ function getEmitter() {
             this.delegates.get(event).get(context)
                 .push({
                     action: handler.bind(context),
-                    left: times,
-                    wait: 0,
-                    every: 0
+                    called: 0,
+                    times,
+                    frequency: 0
                 });
 
             return this;
@@ -140,9 +134,9 @@ function getEmitter() {
             this.delegates.get(event).get(context)
                 .push({
                     action: handler.bind(context),
-                    left: 0,
-                    wait: 0,
-                    every: frequency
+                    called: 0,
+                    times: 0,
+                    frequency
                 });
 
             return this;
