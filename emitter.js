@@ -6,13 +6,12 @@
  */
 const isStar = true;
 
-let getParts = value =>
+const getParts = value =>
     value
         .split('.')
-        .map((_, index, array) =>
-            array
-                .slice(0, index + 1)
-                .join('.'));
+        .map(part => [part])
+        .reduce((acc, part) => acc.concat(`${acc[acc.length - 1]}.${part}`))
+        .reverse();
 
 function createIfEmpty(delegates, event, context) {
     if (!delegates.has(event)) {
@@ -23,19 +22,28 @@ function createIfEmpty(delegates, event, context) {
     }
 }
 
+function callOne(record) {
+    if ((record.times < 1 || record.called < record.times) &&
+        (record.frequency < 1 || !(record.called % record.frequency))) {
+        record.action();
+    }
+    record.called++;
+}
+
 function callAll(delegates, part) {
     if (!delegates.has(part)) {
         return;
     }
     for (var records of delegates.get(part).values()) {
-        records.forEach(record => {
-            if (record.times < 1 || record.called < record.times) {
-                if (record.frequency < 1 || !(record.called % record.frequency)) {
-                    record.action();
-                }
-            }
-            record.called++;
-        });
+        records.forEach(callOne);
+    }
+}
+
+function deleteContext(delegates, event, context) {
+    for (var key of delegates.keys()) {
+        if (key.startsWith(`${event}.`)) {
+            delegates.get(key).delete(context);
+        }
     }
 }
 
@@ -76,11 +84,7 @@ function getEmitter() {
             if (this.delegates.has(event)) {
                 this.delegates.get(event).delete(context);
             }
-            for (var key of this.delegates.keys()) {
-                if (key.startsWith(`${event}.`)) {
-                    this.delegates.get(key).delete(context);
-                }
-            }
+            deleteContext(this.delegates, event, context);
 
             return this;
         },
@@ -92,7 +96,6 @@ function getEmitter() {
          */
         emit: function (event) {
             getParts(event)
-                .reverse()
                 .forEach(part => callAll(this.delegates, part));
 
             return this;
