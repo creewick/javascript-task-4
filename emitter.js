@@ -23,8 +23,12 @@ function createIfEmpty(delegates, event, context) {
 }
 
 function callOne(record) {
-    if ((record.times < 1 || record.called < record.times) &&
-        (record.frequency < 1 || !(record.called % record.frequency))) {
+    let times = record.times;
+    let called = record.called;
+    let frequency = record.frequency;
+
+    if ((times < 1 || called < times) &&
+        (frequency < 1 || !(called % frequency))) {
         record.action();
     }
     record.called++;
@@ -34,13 +38,13 @@ function callAll(delegates, part) {
     if (!delegates.has(part)) {
         return;
     }
-    for (var records of delegates.get(part).values()) {
+    for (const records of delegates.get(part).values()) {
         records.forEach(callOne);
     }
 }
 
 function deleteContext(delegates, event, context) {
-    for (var key of delegates.keys()) {
+    for (const key of delegates.keys()) {
         if (key.startsWith(`${event}.`)) {
             delegates.get(key).delete(context);
         }
